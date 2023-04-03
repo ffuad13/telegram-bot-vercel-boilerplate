@@ -14,7 +14,6 @@ const fetching = async (
       'Authorization': `Bearer ${token}`,
       'Accept': 'application/json, text/plain, */*',
       'Accept-Encoding': 'gzip',
-      'Connection': 'Keep-Alive',
       'Content-Length': contentLength,
       'Content-Type': payload.typeContent,
       'Host': `${PATH[0]}.${URL}`,

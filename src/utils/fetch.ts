@@ -40,6 +40,7 @@ const fetching = async (
       throw new Error(data.error.message);
     }
   } catch (error: any) {
+    console.log(error)
     if (error instanceof TypeError) {
       throw new Error('Network Error: Please check your internet connection.');
     } else {

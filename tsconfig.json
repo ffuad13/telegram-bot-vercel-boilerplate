@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "lib": ["esnext", "dom"],
+    "experimentalDecorators": true,
     "strict": true,
     "target": "esnext",
     "moduleResolution": "node",
@@ -7,7 +9,6 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "outDir": "public",
-    "lib": ["esnext", "dom"],
     "resolveJsonModule": true
   },
   "exclude": ["node_modules"]

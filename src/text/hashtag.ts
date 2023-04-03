@@ -36,6 +36,7 @@ const timesheet = () => async (ctx: any) => {
       ctx.reply(`respon bau`);
     }
   } catch (error) {
+    console.log(error)
     ctx.reply(`Error error`);
   }
 };

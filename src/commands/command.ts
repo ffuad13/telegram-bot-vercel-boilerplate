@@ -13,16 +13,13 @@ const about = () => async (ctx: Context) => {
 
 const start = () => async (ctx: Context) => {
   const userName = `${ctx.message?.from.first_name} ${ctx.message?.from.last_name}`;
-  const startMessage: string = `Hello ${userName}\nWelcome to kuliCode Bot!\n\/help\n\/about`;
+  const startMessage: string = `Hello *${userName}*\nWelcome to kuliCode Bot!\n\n\/help\n\/about`;
   debug(`Triggered "start" command with message \n${startMessage}`);
-  ctx.reply(startMessage);
+  ctx.replyWithMarkdownV2(startMessage, { parse_mode: 'Markdown' });
 };
 
 const help = () => async (ctx: Context) => {
-  ctx.reply(`This is help section
-/help
-/about
-more about this bot please consult author`)
+  ctx.replyWithMarkdownV2(`*This is help section*\n\n/help\n/about\nmore about this bot please consult author`, { parse_mode: 'Markdown' })
 }
 
 export { about, start, help };

@@ -13,7 +13,7 @@ const bot = new Telegraf(BOT_TOKEN);
 
 bot.start(start())
 bot.help(help())
-bot.hashtag(['pia', 'ramen', 'bau'], useLimit(), timesheet())
+bot.hashtag(['pia', 'ramen', 'bau'], useLimit(1, 10000), timesheet())
 bot.command('about', useLimit(), about());
 bot.on('message', useLimit(1, 10000), greeting());
 

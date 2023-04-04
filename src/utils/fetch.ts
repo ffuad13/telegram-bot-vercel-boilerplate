@@ -4,42 +4,38 @@ const fetching = async (
   payload: any,
   token: string = ''
 ): Promise<any> => {
-	const URL = process.env.BASE_URL;
+  const URL = process.env.BASE_URL;
   const PATH: any = process.env.URL_PATH?.split(',');
-	const contentLength = payload['body'].length
+
+  let contentLength;
+  if (payload) contentLength = payload['body']?.length;
 
   let options: RequestInit = {
     method: method,
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/json, text/plain, */*',
-      'Accept-Encoding': 'gzip',
-      'Content-Length': contentLength,
-      'Content-Type': payload.typeContent,
-      'Host': `${PATH[0]}.${URL}`,
-      'User-Agent': 'okhttp/4.9.2',
+      accept: 'application/json, text/plain, */*',
+      'accept-encoding': 'gzip',
+      authorization: `Bearer ${token}`,
+      host: `${PATH[0]}.${URL}`,
+      'user-agent': 'okhttp/4.9.2',
+      'content-type': payload.typeContent,
     },
-		body: payload.typeContent === 'application/x-www-form-urlencoded' ? payload.body : JSON.stringify(payload.body)
   };
 
-	// console.log('options.headers :>> ', options);
-
-  /* if (payload.typeContent == 'application/x-www-form-urlencoded') {
-		options.body = payload.body
-	} else {
-    options.body = JSON.stringify(payload);
-	} */
+  if (method === 'POST') {
+    options.body = payload.body;
+  }
 
   try {
     const response = await fetch(url, options);
-		const data = await response.json();
+    const data = await response.json();
     if (response.ok) {
       return data;
     } else {
-      throw new Error(data.error.message);
+      throw new Error(data);
     }
   } catch (error: any) {
-    console.log(error)
+    console.log(error);
     if (error instanceof TypeError) {
       throw new Error('Network Error: Please check your internet connection.');
     } else {

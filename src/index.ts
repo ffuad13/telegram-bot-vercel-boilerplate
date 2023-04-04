@@ -1,6 +1,6 @@
 import { Telegraf } from 'telegraf';
 
-import { about, start } from './commands';
+import { about, help, start } from './commands';
 import { greeting, timesheet } from './text';
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { development, production } from './core';
@@ -12,6 +12,7 @@ const ENVIRONMENT = process.env.NODE_ENV || '';
 const bot = new Telegraf(BOT_TOKEN);
 
 bot.start(start())
+bot.help(help())
 bot.hashtag(['pia', 'ramen', 'bau'], useLimit(), timesheet())
 bot.command('about', useLimit(), about());
 bot.on('message', useLimit(1, 10000), greeting());

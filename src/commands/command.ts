@@ -13,9 +13,16 @@ const about = () => async (ctx: Context) => {
 
 const start = () => async (ctx: Context) => {
   const userName = `${ctx.message?.from.first_name} ${ctx.message?.from.last_name}`;
-  const startMessage: string = `Hello ${userName}\nWelcome to kuliCode Bot!`;
+  const startMessage: string = `Hello ${userName}\nWelcome to kuliCode Bot!\n\/help\n\/about`;
   debug(`Triggered "start" command with message \n${startMessage}`);
   ctx.reply(startMessage);
 };
 
-export { about, start };
+const help = () => async (ctx: Context) => {
+  ctx.reply(`This is help section
+/help
+/about
+more about this bot please consult author`)
+}
+
+export { about, start, help };

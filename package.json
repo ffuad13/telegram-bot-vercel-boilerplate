@@ -12,6 +12,7 @@
     "@vercel/node": "^2.9.10",
     "dotenv-cli": "^7.0.0",
     "limiter": "^2.1.0",
+    "mongodb": "^5.2.0",
     "telegraf": "^4.12.2"
   },
   "devDependencies": {

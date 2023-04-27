@@ -1,24 +1,30 @@
 import createDebug from 'debug';
 import { fetching } from '../utils';
+import { collections, TimeUser } from '../models';
 
 const debug = createDebug('bot:timesheet_text');
 
 const timesheet = () => async (ctx: any) => {
   debug('Triggered "timesheet" with hashtag');
 
-  let [tag, email, password, taskType]: Array<string> =
-    ctx.message['text'].split(' ');
-  const typeTask: number = parseInt(taskType);
-
   try {
+    let [tag, txt1, txt2, txt3]: Array<string> = ctx.message['text'].split(' ');
+    const typeTask: number = parseInt(txt1);
+    const teleId: number = ctx.message.from.id;
     const URL = process.env.BASE_URL;
     const PATH: any = process.env.URL_PATH?.split(',');
-    const dates = new Date().toJSON().split('T')[0];
+    const dates = new Date()
+      .toLocaleDateString('en-GB', {
+        timeZone: 'Asia/Jakarta',
+      })
+      .split('/')
+      .reverse()
+      .join('-');
     const sendUrl = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}`;
 
-    async function getToken() {
+    async function getLogin() {
       const payloadLogin = {
-        body: `email=${email}&password=${password}&firebase_token=${process.env.FIREBASE_TOKEN}`,
+        body: `email=${txt1}&password=${txt2}&firebase_token=${process.env.FIREBASE_TOKEN}`,
         typeContent: 'application/x-www-form-urlencoded',
       };
 
@@ -39,24 +45,64 @@ const timesheet = () => async (ctx: any) => {
       return filteredTask;
     }
 
-    if (tag === '#pia' && email && password) {
-      const TOKEN = await getToken();
+    async function QueryToken() {
+      const qDb = (await collections.timeUser?.findOne({
+        teleId,
+      })) as unknown as TimeUser;
+      if (!qDb) return false;
+      return qDb;
+    }
+
+    if (txt1 && txt2 && txt3 === 'login') {
+      const isLogin = await QueryToken();
+
+      if (!isLogin) {
+        const token: string = await getLogin();
+        await collections.timeUser?.insertOne({ teleId, token });
+        return ctx.reply(`login timesheet success`);
+      } else {
+        return ctx.reply(`Already login timesheet`);
+      }
+    }
+
+    if (tag === '#pia' && typeof typeTask === 'number') {
+      const qDb = (await QueryToken()) as TimeUser;
+      const TOKEN: string = qDb.token;
 
       const getTaskData = await getFilteredTask(TOKEN, 'PIA');
+
+      if (txt1 === 'list') {
+        const mappedData = getTaskData.map((el: any, i: number) => {
+          return `${i + 1} ${el.task_name}`;
+        });
+        const dataMsg = JSON.stringify(mappedData);
+        return ctx.reply(dataMsg);
+      }
+
       const selectedTask = getTaskData[typeTask - 1];
+
+      let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
+      let bodyObj: any | undefined = customPayload.reduce(
+        (obj: any, data) => {
+          let [k, v] = data.split(':');
+          obj[k] = v;
+          return obj;
+        },
+        {}
+      );
 
       const payloadTask = {
         body: JSON.stringify({
           source: 'PIA',
           task_id: selectedTask.task_id,
-          hours: '8',
-          ts_date: dates,
-          n_hours: '8',
-          progress: 95,
+          hours: bodyObj.hours || '8',
+          ts_date: bodyObj.date || dates,
+          n_hours: bodyObj.hours || '8',
+          progress: parseInt(bodyObj.progress) || 95,
           activity_type_id: 2,
-          activity_desc: 'Enhancement Core e-Meterai PERURI',
+          activity_desc: bodyObj.desc || 'Enhancement Core e-Meterai PERURI',
           trip_location_group_id: 2,
-          working_progress: 95,
+          working_progress: parseInt(bodyObj.progress) || 95,
         }),
         typeContent: 'application/json',
       };
@@ -68,10 +114,20 @@ const timesheet = () => async (ctx: any) => {
       return ctx.reply(taskMsg);
     }
 
-    if (tag === '#ramen' && email && password) {
-      const TOKEN = await getToken();
+    if (tag === '#ramen' && typeof typeTask === 'number') {
+      const qDb = (await QueryToken()) as TimeUser;
+      const TOKEN: string = qDb.token;
 
       const getTaskData = await getFilteredTask(TOKEN, 'RAMEN');
+
+      if (txt1 === 'list') {
+        const mappedData = getTaskData.map((el: any, i: number) => {
+          return `${i + 1} ${el.task_name}`;
+        });
+        const dataMsg = JSON.stringify(mappedData);
+        return ctx.reply(dataMsg);
+      }
+
       const selectedTask = getTaskData[typeTask - 1];
 
       const payloadTask = {
@@ -92,8 +148,9 @@ const timesheet = () => async (ctx: any) => {
       return ctx.reply(taskMsg);
     }
 
-    if (tag === '#bau' && email && password) {
-      const TOKEN = await getToken()
+    if (tag === '#bau') {
+      const qDb = (await QueryToken()) as TimeUser;
+      const TOKEN: string = qDb.token;
 
       const payloadTask = {
         body: JSON.stringify({
@@ -113,7 +170,12 @@ const timesheet = () => async (ctx: any) => {
       return ctx.reply(taskMsg);
     }
 
-    return ctx.replyWithMarkdownV2(`\`#pia email password taskOrder\`\n\`#ramen email password taskOrder\`\n\`#bau email password\``, { parse_mode: 'Markdown' })
+    if (tag === 'timesheet') {
+      return ctx.replyWithMarkdownV2(
+        `\`#pia email password taskOrder\`\n\`#ramen email password taskOrder\`\n\`#bau email password\``,
+        { parse_mode: 'Markdown' }
+      );
+    }
   } catch (error) {
     console.log(error);
     ctx.reply(`an error occurred`);

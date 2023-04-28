@@ -170,9 +170,9 @@ const timesheet = () => async (ctx: any) => {
       return ctx.reply(taskMsg);
     }
 
-    if (tag === 'timesheet') {
+    if (tag === '#timesheet') {
       return ctx.replyWithMarkdownV2(
-        `\`#pia email password taskOrder\`\n\`#ramen email password taskOrder\`\n\`#bau email password\``,
+        `*Login*:\n\`#pia email password login\`\n\`#ramen email password login\`\n\`#bau email password login\`\n*Submit*:\n\`#pia taskOrder <payload>\`\n\`#ramen taskOrder <payload>\`\n\`#bau 1 <payload>\``,
         { parse_mode: 'Markdown' }
       );
     }

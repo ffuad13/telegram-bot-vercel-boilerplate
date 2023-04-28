@@ -99,9 +99,9 @@ const timesheet = () => async (ctx: any) => {
           ts_date: bodyObj.date || dates,
           n_hours: bodyObj.hours || '8',
           progress: parseInt(bodyObj.progress) || 95,
-          activity_type_id: 2,
-          activity_desc: bodyObj.desc || 'Enhancement Core e-Meterai PERURI',
-          trip_location_group_id: 2,
+          activity_type_id: parseInt(bodyObj.location) ||  2,
+          activity_desc: bodyObj.activity || 'Enhancement Core e-Meterai PERURI',
+          trip_location_group_id: parseInt(bodyObj.location) ||  2,
           working_progress: parseInt(bodyObj.progress) || 95,
         }),
         typeContent: 'application/json',
@@ -130,13 +130,23 @@ const timesheet = () => async (ctx: any) => {
 
       const selectedTask = getTaskData[typeTask - 1];
 
+      let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
+      let bodyObj: any | undefined = customPayload.reduce(
+        (obj: any, data) => {
+          let [k, v] = data.split(':');
+          obj[k] = v;
+          return obj;
+        },
+        {}
+      );
+
       const payloadTask = {
         body: JSON.stringify({
           source: 'RAMEN',
           task_id: selectedTask.task_id,
-          hours: 8,
-          ts_date: dates,
-          activity: 'Enhancement Core e-Meterai PERURI',
+          hours: parseInt(bodyObj.hours) || 8,
+          ts_date: bodyObj.date || dates,
+          activity: bodyObj.activity || 'Enhancement Core e-Meterai PERURI',
         }),
         typeContent: 'application/json',
       };
@@ -152,13 +162,23 @@ const timesheet = () => async (ctx: any) => {
       const qDb = (await QueryToken()) as TimeUser;
       const TOKEN: string = qDb.token;
 
+      let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
+      let bodyObj: any | undefined = customPayload.reduce(
+        (obj: any, data) => {
+          let [k, v] = data.split(':');
+          obj[k] = v;
+          return obj;
+        },
+        {}
+      );
+
       const payloadTask = {
         body: JSON.stringify({
           source: 'RAMEN',
           task_id: 'BU',
-          hours: 8,
-          ts_date: dates,
-          activity: 'Enhancement Core e-Meterai PERURI',
+          hours: parseInt(bodyObj.hours) || 8,
+          ts_date: bodyObj.date || dates,
+          activity: bodyObj.activity || 'Enhancement Core e-Meterai PERURI',
         }),
         typeContent: 'application/json',
       };
@@ -172,7 +192,17 @@ const timesheet = () => async (ctx: any) => {
 
     if (tag === '#timesheet') {
       return ctx.replyWithMarkdownV2(
-        `*Login*:\n\`#pia email password login\`\n\`#ramen email password login\`\n\`#bau email password login\`\n*Submit*:\n\`#pia taskOrder <payload>\`\n\`#ramen taskOrder <payload>\`\n\`#bau 1 <payload>\``,
+`*Login*:
+\`#pia email password login\`
+\`#ramen email password login\`
+\`#bau email password login\`
+*List task:* \`#pia or #ramen list\`
+*Submit*:
+\`#pia taskOrder <payload>\`
+\`#ramen taskOrder <payload>\`
+\`#bau <payload>\`
+
+_*payload is optional_`,
         { parse_mode: 'Markdown' }
       );
     }

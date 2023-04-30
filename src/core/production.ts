@@ -31,8 +31,9 @@ const production = async (
   if (req.method === 'POST') {
     await bot.handleUpdate(req.body as unknown as Update, res);
   } else {
-    res.status(200).json('Listening to bot events...');
+    res.status(200).send('Listening to bot events...');
   }
   debug(`starting webhook on port: ${PORT}`);
+  console.log(`starting webhook on port: ${PORT}`)
 };
 export { production };

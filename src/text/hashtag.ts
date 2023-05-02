@@ -65,7 +65,7 @@ const timesheet = () => async (ctx: any) => {
       }
     }
 
-    if (tag === '#pia' && typeof typeTask === 'number') {
+    if (tag === '#pia' && txt1 && typeof typeTask === 'number') {
       const qDb = (await QueryToken()) as TimeUser;
       const TOKEN: string = qDb.token;
 
@@ -114,7 +114,7 @@ const timesheet = () => async (ctx: any) => {
       return ctx.reply(taskMsg);
     }
 
-    if (tag === '#ramen' && typeof typeTask === 'number') {
+    if (tag === '#ramen' && txt1 && typeof typeTask === 'number') {
       const qDb = (await QueryToken()) as TimeUser;
       const TOKEN: string = qDb.token;
 

@@ -15,7 +15,7 @@ const bot = new Telegraf(BOT_TOKEN);
 
 bot.start(start());
 bot.help(help());
-bot.hears(['gempa', 'gempaterkini'], gempa())
+bot.hears(['gempa', 'Gempa', 'Gempaterkini', 'gempaterkini'], gempa())
 bot.hears('test', test())
 bot.hashtag(['pia', 'ramen', 'bau', 'timesheet'], useLimit(1, 10000), timesheet());
 bot.command('about', useLimit(), about());

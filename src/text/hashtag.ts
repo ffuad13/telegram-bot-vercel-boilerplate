@@ -53,7 +53,7 @@ const timesheet = () => async (ctx: any) => {
       return qDb;
     }
 
-    if (txt1 && txt2 && txt3 === 'login') {
+    if (tag === '#timesheet' && txt1 && txt2 && txt3 === 'login') {
       const isLogin = await QueryToken();
 
       if (!isLogin) {
@@ -190,22 +190,19 @@ const timesheet = () => async (ctx: any) => {
       return ctx.reply(taskMsg);
     }
 
-    if (tag === '#timesheet') {
-      return ctx.replyWithMarkdownV2(
+    return ctx.replyWithMarkdownV2(
 `*Login*:
-\`#pia email password login\`
-\`#ramen email password login\`
-\`#bau email password login\`
-*List task:* \`#pia or #ramen list\`
+\`#timesheet email password login\`
+*List task:*
+\`#pia or #ramen list\`
 *Submit*:
 \`#pia taskOrder <payload>\`
 \`#ramen taskOrder <payload>\`
 \`#bau <payload>\`
 
 _*payload is optional_`,
-        { parse_mode: 'Markdown' }
-      );
-    }
+      { parse_mode: 'Markdown' }
+    );
   } catch (error) {
     console.log(error);
     ctx.reply(`an error occurred`);

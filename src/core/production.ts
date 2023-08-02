@@ -35,6 +35,6 @@ const production = async (
     res.status(200).send('Listening to bot events...');
   }
   debug(`starting webhook on port: ${Port}`);
-  sendLog(`starting webhook on port: ${Port}`)
+  // sendLog(`starting webhook on port: ${Port}`)
 };
 export { production };

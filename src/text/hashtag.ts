@@ -79,7 +79,7 @@ const timesheet = () => async (ctx: any) => {
 `*Name*: ${user_name}
 *NIK*: ${user_id}
 -------
-*Peroide*: ${getReport.data.periode}
+*Periode*: ${getReport.data.periode}
 *Workhours*: ${getReport.data.hour} from ${getReport.data.workhours}
 *Workdays*: ${getReport.data.entry} from ${getReport.data.workdays}
 `,

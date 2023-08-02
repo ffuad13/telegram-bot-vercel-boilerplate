@@ -7,11 +7,12 @@ import { greeting, timesheet, gempa, test } from './text';
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { development, production } from './core';
 import { useLimit } from './middlewares/limiter';
+const {BOT_TOKEN, NODE_ENV} = process.env
 
-const BOT_TOKEN = process.env.BOT_TOKEN || '';
-const ENVIRONMENT = process.env.NODE_ENV || '';
+const TOKEN = BOT_TOKEN || '';
+const ENV = NODE_ENV || '';
 
-const bot = new Telegraf(BOT_TOKEN);
+const bot = new Telegraf(TOKEN);
 
 bot.start(start());
 bot.help(help());
@@ -26,7 +27,7 @@ export const startVercel = async (req: VercelRequest, res: VercelResponse) => {
   await production(req, res, bot);
 };
 //dev mode
-ENVIRONMENT !== 'production' && development(bot);
+ENV !== 'production' && development(bot);
 
 connectToDatabase().catch((error: Error) => {
   console.error('Database connection failed', error);

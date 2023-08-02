@@ -2,11 +2,12 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import createDebug from 'debug';
 import { Context, Telegraf } from 'telegraf';
 import { Update } from 'telegraf/typings/core/types/typegram';
+import { sendLog } from '../utils';
+const {VERCEL_URL, PORT} = process.env
 
 const debug = createDebug('bot:dev');
 
-const PORT = (process.env.PORT && parseInt(process.env.PORT, 10)) || 3000;
-const VERCEL_URL = `${process.env.VERCEL_URL}`;
+const Port = (PORT && parseInt(PORT, 10)) || 3000;
 
 const production = async (
   req: VercelRequest,
@@ -33,7 +34,7 @@ const production = async (
   } else {
     res.status(200).send('Listening to bot events...');
   }
-  debug(`starting webhook on port: ${PORT}`);
-  console.log(`starting webhook on port: ${PORT}`)
+  debug(`starting webhook on port: ${Port}`);
+  sendLog(`starting webhook on port: ${Port}`)
 };
 export { production };

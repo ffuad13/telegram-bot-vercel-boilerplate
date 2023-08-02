@@ -4,4 +4,8 @@ class TimeUser {
 	constructor(public teleId: number, public token: string, public id?: ObjectId) {}
 }
 
-export {TimeUser}
+class TimePlate {
+	constructor(public userId: ObjectId, public payload: object, public id?: ObjectId) {}
+}
+
+export {TimeUser, TimePlate}

@@ -1,6 +1,6 @@
 import createDebug from 'debug';
-import { fetching } from '../utils';
-import { collections, TimeUser } from '../models';
+import { decodeJWT, fetching } from '../utils';
+import { collections, TimeUser, TimePlate } from '../models';
 
 const debug = createDebug('bot:timesheet_text');
 
@@ -13,6 +13,7 @@ const timesheet = () => async (ctx: any) => {
     const teleId: number = ctx.message.from.id;
     const URL = process.env.BASE_URL;
     const PATH: any = process.env.URL_PATH?.split(',');
+    const sendUrl = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}`;
     const dates = new Date()
       .toLocaleDateString('en-GB', {
         timeZone: 'Asia/Jakarta',
@@ -20,7 +21,6 @@ const timesheet = () => async (ctx: any) => {
       .split('/')
       .reverse()
       .join('-');
-    const sendUrl = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}`;
 
     async function getLogin() {
       const payloadLogin = {
@@ -53,15 +53,39 @@ const timesheet = () => async (ctx: any) => {
       return qDb;
     }
 
-    if (tag === '#timesheet' && txt1 && txt2 && txt3 === 'login') {
-      const isLogin = await QueryToken();
+    if (tag === '#timesheet' && txt1) {
+      if (txt2 && txt3 === 'login') {
+        const isLogin = await QueryToken();
 
-      if (!isLogin) {
-        const token: string = await getLogin();
-        await collections.timeUser?.insertOne({ teleId, token });
-        return ctx.reply(`login timesheet success`);
-      } else {
-        return ctx.reply(`Already login timesheet`);
+        if (!isLogin) {
+          const token: string = await getLogin();
+          await collections.timeUser?.insertOne({ teleId, token });
+          return ctx.reply(`login timesheet success`);
+        } else {
+          return ctx.reply(`Already login timesheet`);
+        }
+      }
+
+      if (txt1 === 'report') {
+        const qDb = (await QueryToken()) as TimeUser;
+        const TOKEN: string = qDb.token;
+        const {user_id, user_name} = decodeJWT(TOKEN);
+        const date: string = txt2 || dates.split('-').join('').substring(0, 6);
+        const getUrl = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[6]}${PATH[7]}?periode=${date}`;
+
+        const getReport = await fetching(getUrl, 'GET', '', TOKEN)
+
+        return ctx.replyWithMarkdownV2(
+`*Name*: ${user_name}
+*NIK*: ${user_id}
+-------
+*Peroide*: ${getReport.data.periode}
+*Workhours*: ${getReport.data.hour} from ${getReport.data.workhours}
+*Workdays*: ${getReport.data.entry} from ${getReport.data.workdays}
+`,
+                { parse_mode: 'Markdown' }
+              );
+
       }
     }
 
@@ -199,8 +223,11 @@ const timesheet = () => async (ctx: any) => {
 \`#pia taskOrder <payload>\`
 \`#ramen taskOrder <payload>\`
 \`#bau <payload>\`
+*Report*:
+\`#timesheet report <yyyymm>\`
 
-_*payload is optional_`,
+_*<payload> is optional_
+_*<yyyymm> is optional_`,
       { parse_mode: 'Markdown' }
     );
   } catch (error) {

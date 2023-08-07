@@ -4,6 +4,7 @@ import { connectToDatabase } from './models/db.config';
 
 import { about, help, start } from './commands';
 import { greeting, timesheet, gempa, test } from './text';
+import { timesMark } from './markup';
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { development, production } from './core';
 import { useLimit } from './middlewares/limiter';
@@ -19,6 +20,7 @@ bot.help(help());
 bot.hears(['gempa', 'Gempa', 'Gempaterkini', 'gempaterkini'], gempa())
 bot.hears('test', test())
 bot.hashtag(['pia', 'ramen', 'bau', 'timesheet'], useLimit(1, 10000), timesheet());
+bot.command("keys", timesMark());
 bot.command('about', useLimit(), about());
 bot.on('message', useLimit(1, 10000), greeting());
 

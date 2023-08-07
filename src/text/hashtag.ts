@@ -53,6 +53,30 @@ const timesheet = () => async (ctx: any) => {
       return qDb;
     }
 
+    if (txt1 === 'purge') {
+      await collections.timePlate?.deleteOne({teleId})
+      await collections.timeUser?.deleteOne({teleId})
+      return ctx.reply('token and template purged')
+    }
+
+    if (txt1 === 'createTemplate') {
+      let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
+      let restText: string = ctx.message['text'].split(' ').slice(3).join(' ');
+
+      let tmpObj: any | undefined = customPayload.reduce((obj: any, data) => {
+        let [k, v] = data.split(':');
+        if (k === 'activity') {
+          v += ' ' + restText;
+        }
+        obj[k] = v;
+        return obj;
+      }, {});
+
+      const isExist = await collections.timePlate?.countDocuments({teleId})
+      isExist ? await collections.timePlate?.updateOne({teleId}, {$set: {tmpObj}}) : await collections.timePlate?.insertOne({ teleId, tmpObj });
+      return ctx.reply(`template crated`);
+    }
+
     if (tag === '#timesheet' && txt1) {
       if (txt2 && txt3 === 'login') {
         const isLogin = await QueryToken();
@@ -69,23 +93,48 @@ const timesheet = () => async (ctx: any) => {
       if (txt1 === 'report') {
         const qDb = (await QueryToken()) as TimeUser;
         const TOKEN: string = qDb.token;
-        const {user_id, user_name} = decodeJWT(TOKEN);
+        const { user_id, user_name } = decodeJWT(TOKEN);
         const date: string = txt2 || dates.split('-').join('').substring(0, 6);
         const getUrl = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[6]}${PATH[7]}?periode=${date}`;
 
-        const getReport = await fetching(getUrl, 'GET', '', TOKEN)
+        const getReport = await fetching(getUrl, 'GET', '', TOKEN);
+        const {periode, hour, workhours, entry, workdays} = getReport.data
 
         return ctx.replyWithMarkdownV2(
-`*Name*: ${user_name}
+          `*Name*: ${user_name}
 *NIK*: ${user_id}
 -------
-*Periode*: ${getReport.data.periode}
-*Workhours*: ${getReport.data.hour} from ${getReport.data.workhours}
-*Workdays*: ${getReport.data.entry} from ${getReport.data.workdays}
+*Periode*: ${periode}
+*Workhours*: ${hour} from ${workhours}
+*Workdays*: ${entry} from ${workdays}
 `,
-                { parse_mode: 'Markdown' }
-              );
+          { parse_mode: 'Markdown' }
+        );
+      }
 
+      if (txt1 === 'daily') {
+        const qDb = (await QueryToken()) as TimeUser;
+        const TOKEN: string = qDb.token;
+        const { user_id, user_name } = decodeJWT(TOKEN);
+        const date: string = dates.split('-').join('').substring(0, 6);
+        const getUrl = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}?periode=${date}`;
+
+        const getReport = await fetching(getUrl, 'GET', '', TOKEN);
+        const nonEmptyColor = getReport.data.timesheet.filter((entry: any) => entry.color !== "").map((entry: any )=> entry.title);
+
+        function arrayToMarkdown(data: any) {
+          let markdownString =`*Name*: ${user_name}\n*NIK*: ${user_id}\n`;
+
+          data.forEach((item: any) => {
+            markdownString += `*${item}*  ✅\n`;
+          });
+
+          return markdownString;
+        }
+
+        const markdownString = arrayToMarkdown(nonEmptyColor);
+
+        return ctx.replyWithMarkdownV2(markdownString, { parse_mode: 'Markdown' });
       }
     }
 
@@ -96,37 +145,39 @@ const timesheet = () => async (ctx: any) => {
       const getTaskData = await getFilteredTask(TOKEN, 'PIA');
 
       if (txt1 === 'list') {
-        const mappedData = getTaskData.map((el: any, i: number) => {
-          return `${i + 1} ${el.task_name}`;
+        let replytext = `*PIA List*\n=======\n`
+        getTaskData.forEach((el: any, i: number) => {
+          replytext += `${i + 1} - ${el.task_name}\n`;
         });
-        const dataMsg = JSON.stringify(mappedData);
-        return ctx.reply(dataMsg);
+
+        return ctx.reply(replytext);
       }
 
       const selectedTask = getTaskData[typeTask - 1];
 
       let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
-      let bodyObj: any | undefined = customPayload.reduce(
-        (obj: any, data) => {
-          let [k, v] = data.split(':');
-          obj[k] = v;
-          return obj;
-        },
-        {}
-      );
+      let bodyObj: any | undefined = customPayload.reduce((obj: any, data) => {
+        let [k, v] = data.split(':');
+        obj[k] = v;
+        return obj;
+      }, {});
+
+      const tmplDb = (await collections.timePlate?.findOne({teleId})) as unknown as TimePlate
+      const {hours, progress, location, activity}: any = tmplDb.tmpObj
 
       const payloadTask = {
         body: JSON.stringify({
           source: 'PIA',
           task_id: selectedTask.task_id,
-          hours: bodyObj.hours || '8',
+          hours: bodyObj.hours || hours || '8',
           ts_date: bodyObj.date || dates,
-          n_hours: bodyObj.hours || '8',
-          progress: parseInt(bodyObj.progress) || 95,
-          activity_type_id: parseInt(bodyObj.location) ||  2,
-          activity_desc: bodyObj.activity || 'Enhancement Core e-Meterai PERURI',
-          trip_location_group_id: parseInt(bodyObj.location) ||  2,
-          working_progress: parseInt(bodyObj.progress) || 95,
+          n_hours: bodyObj.hours || hours || '8',
+          progress: parseInt(bodyObj.progress || progress) || 95,
+          activity_type_id: parseInt(bodyObj.location || location) || 2,
+          activity_desc:
+            bodyObj.activity || activity || 'Enhancement Core Project Application',
+          trip_location_group_id: parseInt(bodyObj.location || location) || 2,
+          working_progress: parseInt(bodyObj.progress || progress) || 95,
         }),
         typeContent: 'application/json',
       };
@@ -145,24 +196,22 @@ const timesheet = () => async (ctx: any) => {
       const getTaskData = await getFilteredTask(TOKEN, 'RAMEN');
 
       if (txt1 === 'list') {
-        const mappedData = getTaskData.map((el: any, i: number) => {
-          return `${i + 1} ${el.task_name}`;
+        let replytext = `*Ramen List*\n=======\n`
+        getTaskData.forEach((el: any, i: number) => {
+          replytext += `${i + 1} - ${el.task_name}\n`;
         });
-        const dataMsg = JSON.stringify(mappedData);
-        return ctx.reply(dataMsg);
+
+        return ctx.reply(replytext);
       }
 
       const selectedTask = getTaskData[typeTask - 1];
 
       let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
-      let bodyObj: any | undefined = customPayload.reduce(
-        (obj: any, data) => {
-          let [k, v] = data.split(':');
-          obj[k] = v;
-          return obj;
-        },
-        {}
-      );
+      let bodyObj: any | undefined = customPayload.reduce((obj: any, data) => {
+        let [k, v] = data.split(':');
+        obj[k] = v;
+        return obj;
+      }, {});
 
       const payloadTask = {
         body: JSON.stringify({
@@ -187,14 +236,11 @@ const timesheet = () => async (ctx: any) => {
       const TOKEN: string = qDb.token;
 
       let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
-      let bodyObj: any | undefined = customPayload.reduce(
-        (obj: any, data) => {
-          let [k, v] = data.split(':');
-          obj[k] = v;
-          return obj;
-        },
-        {}
-      );
+      let bodyObj: any | undefined = customPayload.reduce((obj: any, data) => {
+        let [k, v] = data.split(':');
+        obj[k] = v;
+        return obj;
+      }, {});
 
       const payloadTask = {
         body: JSON.stringify({
@@ -215,19 +261,22 @@ const timesheet = () => async (ctx: any) => {
     }
 
     return ctx.replyWithMarkdownV2(
-`*Login*:
+      `*Login*:
 \`#timesheet email password login\`
 *List task:*
 \`#pia or #ramen list\`
 *Submit*:
-\`#pia taskOrder <payload>\`
-\`#ramen taskOrder <payload>\`
-\`#bau <payload>\`
+\`#pia taskOrder *<payload>\`
+\`#ramen taskOrder *<payload>\`
+\`#bau *<payload>\`
 *Report*:
-\`#timesheet report <yyyymm>\`
+\`#timesheet report *<yyyymm>\`
+\`#timesheet daily\`
+*Template*:
+\`#timesheet createTemplate **<payload>\`
 
-_*<payload> is optional_
-_*<yyyymm> is optional_`,
+_* is optional_
+_** is mandatory_`,
       { parse_mode: 'Markdown' }
     );
   } catch (error) {

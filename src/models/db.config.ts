@@ -15,6 +15,8 @@ export async function connectToDatabase() {
   const timeUsersCollection: mongoDB.Collection = db.collection('timeUser');
   const timePlateCollection: mongoDB.Collection = db.collection('timePlate');
 
+  db.collection('timePlate').createIndex( { "teleId" : 1 }, { unique : true } )
+
   collections.timeUser = timeUsersCollection;
   collections.timePlate = timePlateCollection;
 

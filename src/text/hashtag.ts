@@ -150,7 +150,7 @@ const timesheet = () => async (ctx: any) => {
           replytext += `${i + 1} - ${el.task_name}\n`;
         });
 
-        return ctx.reply(replytext);
+        return ctx.replyWithMarkdownV2(replytext, { parse_mode: 'Markdown' });
       }
 
       const selectedTask = getTaskData[typeTask - 1];
@@ -163,7 +163,8 @@ const timesheet = () => async (ctx: any) => {
       }, {});
 
       const tmplDb = (await collections.timePlate?.findOne({teleId})) as unknown as TimePlate
-      const {hours, progress, location, activity}: any = tmplDb.tmpObj
+      // const {hours='', progress='', location='', activity=''}: any = tmplDb?.tmpObj
+      let {hours=null, progress=null, location=null, activity=null}: any = tmplDb?.tmpObj ?? {}
 
       const payloadTask = {
         body: JSON.stringify({
@@ -184,9 +185,14 @@ const timesheet = () => async (ctx: any) => {
 
       const sendTask = await fetching(sendUrl, 'POST', payloadTask, TOKEN);
 
-      const taskMsg = `Message: Timesheet PIA Submitted\n${sendTask.data}`;
+      let datas = JSON.parse(sendTask.data)
 
-      return ctx.reply(taskMsg);
+      let replyTxt = `Timesheet PIA Submitted\n=======\n`
+      Object.entries(datas).forEach(([key, value]) => {
+        replyTxt += `${key}: ${value}\n`
+      })
+
+      return ctx.reply(replyTxt);
     }
 
     if (tag === '#ramen' && txt1 && typeof typeTask === 'number') {
@@ -201,7 +207,7 @@ const timesheet = () => async (ctx: any) => {
           replytext += `${i + 1} - ${el.task_name}\n`;
         });
 
-        return ctx.reply(replytext);
+        return ctx.replyWithMarkdownV2(replytext, { parse_mode: 'Markdown' });
       }
 
       const selectedTask = getTaskData[typeTask - 1];

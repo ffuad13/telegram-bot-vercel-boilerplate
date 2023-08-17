@@ -64,16 +64,19 @@ const timesheet = () => async (ctx: any) => {
       let restText: string = ctx.message['text'].split(' ').slice(3).join(' ');
 
       let tmpObj: any | undefined = customPayload.reduce((obj: any, data) => {
+        const keyArr = ['hours','progress','location','activity'];
         let [k, v] = data.split(':');
-        if (k === 'activity') {
-          v += ' ' + restText;
+        if (keyArr.includes(k)) {
+          if (k === 'activity') {
+            v += ' ' + restText;
+          }
+          obj[k] = v;
+          return obj;
         }
-        obj[k] = v;
-        return obj;
       }, {});
 
       const isExist = await collections.timePlate?.countDocuments({teleId})
-      isExist ? await collections.timePlate?.updateOne({teleId}, {$set: {tmpObj}}) : await collections.timePlate?.insertOne({ teleId, tmpObj });
+      await collections.timePlate?.updateOne({teleId}, {$set: {tmpObj}}, {upsert: true})
       return ctx.reply(`template crated`);
     }
 
@@ -116,17 +119,18 @@ const timesheet = () => async (ctx: any) => {
         const qDb = (await QueryToken()) as TimeUser;
         const TOKEN: string = qDb.token;
         const { user_id, user_name } = decodeJWT(TOKEN);
-        const date: string = dates.split('-').join('').substring(0, 6);
+        const date: string = txt2 || dates.split('-').join('').substring(0, 6);
         const getUrl = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}?periode=${date}`;
 
         const getReport = await fetching(getUrl, 'GET', '', TOKEN);
-        const nonEmptyColor = getReport.data.timesheet.filter((entry: any) => entry.color !== "").map((entry: any )=> entry.title);
+        const nonEmptyColor = getReport.data.timesheet.filter((entry: any) => entry.color !== "").map((entry: any )=> ({[entry.title]:entry.color}));
 
         function arrayToMarkdown(data: any) {
           let markdownString =`*Name*: ${user_name}\n*NIK*: ${user_id}\n`;
 
-          data.forEach((item: any) => {
-            markdownString += `*${item}*  ✅\n`;
+          data.forEach((item: any, index:number) => {
+            const key: any = Object.keys(item)
+            markdownString += `${index + 1} *${key}*  ${item[key] === "Green" ? '✅' : '⏳'}\n`;
           });
 
           return markdownString;
@@ -139,6 +143,35 @@ const timesheet = () => async (ctx: any) => {
     }
 
     if (tag === '#pia' && txt1 && typeof typeTask === 'number') {
+      let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
+      let bodyObj: any | undefined = customPayload.reduce((obj: any, data) => {
+        let [k, v] = data.split(':');
+        obj[k] = v;
+        return obj;
+      }, {});
+
+      const checkDay = new Date((bodyObj.date || dates)).getDay()
+      const monthNow = (bodyObj.date || dates).split('-').join('').substring(5, 6)
+      const dayOff = await (await fetch(`https://dayoffapi.vercel.app/api?month=${monthNow}`)).json()
+
+      function filterDay(array:any, targetDate:string) {
+        return array.filter((item:any) => {
+          const formattedTargetDate = new Date(targetDate).toISOString().slice(0, 10);
+          const formattedItemDate = new Date(item.tanggal).toISOString().slice(0, 10);
+          return formattedItemDate === formattedTargetDate;
+        });
+      }
+
+      const isDayOff = filterDay(dayOff, (bodyObj.date || dates))[0]?.is_cuti;
+
+      if (isDayOff) {
+        return ctx.reply('Cuti Bung')
+      } else if (isDayOff === false) {
+        return ctx.reply('Libur Bang')
+      } else if ([0, 6].indexOf(checkDay) != -1) {
+        return ctx.reply('Weekend Boss')
+      }
+
       const qDb = (await QueryToken()) as TimeUser;
       const TOKEN: string = qDb.token;
 
@@ -153,19 +186,10 @@ const timesheet = () => async (ctx: any) => {
         return ctx.replyWithMarkdownV2(replytext, { parse_mode: 'Markdown' });
       }
 
-      const selectedTask = getTaskData[typeTask - 1];
-
-      let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
-      let bodyObj: any | undefined = customPayload.reduce((obj: any, data) => {
-        let [k, v] = data.split(':');
-        obj[k] = v;
-        return obj;
-      }, {});
-
       const tmplDb = (await collections.timePlate?.findOne({teleId})) as unknown as TimePlate
-      // const {hours='', progress='', location='', activity=''}: any = tmplDb?.tmpObj
       let {hours=null, progress=null, location=null, activity=null}: any = tmplDb?.tmpObj ?? {}
 
+      const selectedTask = getTaskData[typeTask - 1];
       const payloadTask = {
         body: JSON.stringify({
           source: 'PIA',
@@ -268,7 +292,7 @@ const timesheet = () => async (ctx: any) => {
 
     return ctx.replyWithMarkdownV2(
       `*Login*:
-\`#timesheet email password login\`
+\`#timesheet email password **login\`
 *List task:*
 \`#pia or #ramen list\`
 *Submit*:
@@ -287,7 +311,7 @@ _** is mandatory_`,
     );
   } catch (error) {
     console.log(error);
-    ctx.reply(`an error occurred`);
+    ctx.reply(`error:tms`);
   }
 };
 

@@ -12,9 +12,9 @@ const timesheet = () => async (ctx: any) => {
     const typeTask: number = parseInt(txt1);
     const teleId: number = ctx.message.from.id;
     const URL = process.env.BASE_URL;
-    const PATH: any = process.env.URL_PATH?.split(',');
-    const sendUrl = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}`;
-    const dates = new Date()
+    const PATH: string[] = process.env.URL_PATH?.split(',') as string[];
+    const sendUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}`;
+    const dates: string = new Date()
       .toLocaleDateString('en-GB', {
         timeZone: 'Asia/Jakarta',
       })
@@ -28,14 +28,14 @@ const timesheet = () => async (ctx: any) => {
         typeContent: 'application/x-www-form-urlencoded',
       };
 
-      const loginUrl = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[3]}`;
+      const loginUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[3]}`;
       const login = await fetching(loginUrl, 'POST', payloadLogin);
 
       return login.data.token;
     }
 
     async function getFilteredTask(TOKEN: string, source: string) {
-      const getTaskUrl = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[4]}`;
+      const getTaskUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[4]}`;
       const getTask = await fetching(getTaskUrl, 'GET', '', TOKEN);
       const dataTask: any = getTask.data;
 
@@ -45,26 +45,27 @@ const timesheet = () => async (ctx: any) => {
       return filteredTask;
     }
 
-    async function QueryToken() {
-      const qDb = (await collections.timeUser?.findOne({
+    async function QueryToken(): Promise<string> {
+      const qDb = await collections.timeUser?.findOne({
         teleId,
-      })) as unknown as TimeUser;
-      if (!qDb) return false;
-      return qDb;
+      }) as unknown as TimeUser;
+      if (!qDb) return '';
+      return qDb.token;
     }
 
-    if (txt1 === 'purge') {
-      await collections.timePlate?.deleteOne({teleId})
-      await collections.timeUser?.deleteOne({teleId})
-      return ctx.reply('token and template purged')
+    interface ObjTxt {
+      hours: string
+      progress: string
+      date?: string
+      location: string
+      activity: string
     }
-
-    if (txt1 === 'createTemplate') {
+    function GetPayload() {
       let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
-      let restText: string = ctx.message['text'].split(' ').slice(3).join(' ');
+      let restText: string | '' = ctx.message['text'].split(' ').slice(3).join(' ');
 
-      let tmpObj: any | undefined = customPayload.reduce((obj: any, data) => {
-        const keyArr = ['hours','progress','location','activity'];
+      let tmpObj: ObjTxt = customPayload.reduce((obj: any , data) => {
+        const keyArr = ['hours','progress','date','location','activity'];
         let [k, v] = data.split(':');
         if (keyArr.includes(k)) {
           if (k === 'activity') {
@@ -75,82 +76,14 @@ const timesheet = () => async (ctx: any) => {
         }
       }, {});
 
-      const isExist = await collections.timePlate?.countDocuments({teleId})
-      await collections.timePlate?.updateOne({teleId}, {$set: {tmpObj}}, {upsert: true})
-      return ctx.reply(`template crated`);
+      return tmpObj
     }
 
-    if (tag === '#timesheet' && txt1) {
-      if (txt2 && txt3 === 'login') {
-        const isLogin = await QueryToken();
-
-        if (!isLogin) {
-          const token: string = await getLogin();
-          await collections.timeUser?.insertOne({ teleId, token });
-          return ctx.reply(`login timesheet success`);
-        } else {
-          return ctx.reply(`Already login timesheet`);
-        }
-      }
-
-      if (txt1 === 'report') {
-        const qDb = (await QueryToken()) as TimeUser;
-        const TOKEN: string = qDb.token;
-        const { user_id, user_name } = decodeJWT(TOKEN);
-        const date: string = txt2 || dates.split('-').join('').substring(0, 6);
-        const getUrl = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[6]}${PATH[7]}?periode=${date}`;
-
-        const getReport = await fetching(getUrl, 'GET', '', TOKEN);
-        const {periode, hour, workhours, entry, workdays} = getReport.data
-
-        return ctx.replyWithMarkdownV2(
-          `*Name*: ${user_name}
-*NIK*: ${user_id}
--------
-*Periode*: ${periode}
-*Workhours*: ${hour} from ${workhours}
-*Workdays*: ${entry} from ${workdays}
-`,
-          { parse_mode: 'Markdown' }
-        );
-      }
-
-      if (txt1 === 'daily') {
-        const qDb = (await QueryToken()) as TimeUser;
-        const TOKEN: string = qDb.token;
-        const { user_id, user_name } = decodeJWT(TOKEN);
-        const date: string = txt2 || dates.split('-').join('').substring(0, 6);
-        const getUrl = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}?periode=${date}`;
-
-        const getReport = await fetching(getUrl, 'GET', '', TOKEN);
-        const nonEmptyColor = getReport.data.timesheet.filter((entry: any) => entry.color !== "").map((entry: any )=> ({[entry.title]:entry.color}));
-
-        function arrayToMarkdown(data: any) {
-          let markdownString =`*Name*: ${user_name}\n*NIK*: ${user_id}\n`;
-
-          data.forEach((item: any, index:number) => {
-            const key: any = Object.keys(item)
-            markdownString += `${index + 1} *${key}*  ${item[key] === "Green" ? '✅' : '⏳'}\n`;
-          });
-
-          return markdownString;
-        }
-
-        const markdownString = arrayToMarkdown(nonEmptyColor);
-
-        return ctx.replyWithMarkdownV2(markdownString, { parse_mode: 'Markdown' });
-      }
-    }
-
-    if (tag === '#pia' && txt1 && typeof typeTask === 'number') {
-      let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
-      let bodyObj: any | undefined = customPayload.reduce((obj: any, data) => {
-        let [k, v] = data.split(':');
-        obj[k] = v;
-        return obj;
-      }, {});
-
+    async function checkDate(bodyObj: ObjTxt) {
       const checkDay = new Date((bodyObj.date || dates)).getDay()
+      if ([0, 6].indexOf(checkDay) != -1) {
+        return 'Weekend Boss'
+      }
       const monthNow = (bodyObj.date || dates).split('-').join('').substring(5, 6)
       const dayOff = await (await fetch(`https://dayoffapi.vercel.app/api?month=${monthNow}`)).json()
 
@@ -163,17 +96,91 @@ const timesheet = () => async (ctx: any) => {
       }
 
       const isDayOff = filterDay(dayOff, (bodyObj.date || dates))[0]?.is_cuti;
-
       if (isDayOff) {
-        return ctx.reply('Cuti Bung')
+        return 'Cuti Bung'
       } else if (isDayOff === false) {
-        return ctx.reply('Libur Bang')
-      } else if ([0, 6].indexOf(checkDay) != -1) {
-        return ctx.reply('Weekend Boss')
+        return 'Libur Bang'
+      }
+    }
+
+    if (txt1 === 'purge') {
+      await collections.timePlate?.deleteOne({teleId})
+      await collections.timeUser?.deleteOne({teleId})
+      return ctx.reply('token and template purged')
+    }
+
+    if (txt1 === 'createTemplate') {
+      const tmpObj = GetPayload()
+      delete tmpObj.date
+
+      await collections.timePlate?.updateOne({teleId}, {$set: {tmpObj}}, {upsert: true})
+      return ctx.reply(`template crated`);
+    }
+
+    if (tag === '#timesheet' && txt1) {
+      if (txt2 && txt3 === 'login') {
+        const isLogin: string = await QueryToken();
+
+        if (!isLogin) {
+          const token: string = await getLogin();
+          await collections.timeUser?.insertOne({ teleId, token });
+          return ctx.reply(`login timesheet success`);
+        } else {
+          return ctx.reply(`Already login timesheet`);
+        }
       }
 
-      const qDb = (await QueryToken()) as TimeUser;
-      const TOKEN: string = qDb.token;
+      if (txt1 === 'report' || txt1 === 'daily') {
+        const TOKEN: string = await QueryToken();
+        const { user_id, user_name } = decodeJWT(TOKEN);
+        const date: string = txt2 || dates.split('-').join('').substring(0, 6);
+
+        const getUrl: string = txt1 === 'report' ? `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[6]}${PATH[7]}?periode=${date}` : `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}?periode=${date}`;
+
+        const getReport = await fetching(getUrl, 'GET', '', TOKEN);
+
+        if (txt1 === 'report') {
+          const {periode, hour, workhours, entry, workdays} = getReport.data
+
+          return ctx.replyWithMarkdownV2(
+`*Name*: ${user_name}
+*NIK*: ${user_id}
+-------
+*Periode*: ${periode}
+*Workhours*: ${hour} from ${workhours}
+*Workdays*: ${entry} from ${workdays}
+`,
+            { parse_mode: 'Markdown' }
+          );
+        } else {
+          const nonEmptyColor = getReport.data.timesheet.filter((entry: any) => entry.color !== "").map((entry: any )=> ({[entry.title]:entry.color}));
+
+          function arrayToMarkdown(data: any) {
+            let markdownString =`*Name*: ${user_name}\n*NIK*: ${user_id}\n`;
+
+            data.forEach((item: any, index:number) => {
+              const key: any = Object.keys(item)
+              markdownString += `${index + 1} *${key}*  ${item[key] === "Green" ? '✅' : '⏳'}\n`;
+            });
+
+            return markdownString;
+          }
+
+          const markdownString = arrayToMarkdown(nonEmptyColor);
+
+          return ctx.replyWithMarkdownV2(markdownString, { parse_mode: 'Markdown' });
+        }
+
+      }
+    }
+
+    if (tag === '#pia' && txt1 && typeof typeTask === 'number') {
+      const bodyObj = GetPayload();
+
+      const isOff = await checkDate(bodyObj)
+      if (isOff) return ctx.reply(isOff)
+
+      const TOKEN: string = await QueryToken();
 
       const getTaskData = await getFilteredTask(TOKEN, 'PIA');
 
@@ -199,8 +206,7 @@ const timesheet = () => async (ctx: any) => {
           n_hours: bodyObj.hours || hours || '8',
           progress: parseInt(bodyObj.progress || progress) || 95,
           activity_type_id: parseInt(bodyObj.location || location) || 2,
-          activity_desc:
-            bodyObj.activity || activity || 'Enhancement Core Project Application',
+          activity_desc: bodyObj.activity || activity || 'Enhancement Core Project Application',
           trip_location_group_id: parseInt(bodyObj.location || location) || 2,
           working_progress: parseInt(bodyObj.progress || progress) || 95,
         }),
@@ -220,8 +226,12 @@ const timesheet = () => async (ctx: any) => {
     }
 
     if (tag === '#ramen' && txt1 && typeof typeTask === 'number') {
-      const qDb = (await QueryToken()) as TimeUser;
-      const TOKEN: string = qDb.token;
+      const bodyObj = GetPayload();
+
+      const isOff = await checkDate(bodyObj)
+      if (isOff) return ctx.reply(isOff)
+
+      const TOKEN: string = await QueryToken();
 
       const getTaskData = await getFilteredTask(TOKEN, 'RAMEN');
 
@@ -234,22 +244,17 @@ const timesheet = () => async (ctx: any) => {
         return ctx.replyWithMarkdownV2(replytext, { parse_mode: 'Markdown' });
       }
 
+      const tmplDb = (await collections.timePlate?.findOne({teleId})) as unknown as TimePlate
+      let {hours=null, activity=null}: any = tmplDb?.tmpObj ?? {}
+
       const selectedTask = getTaskData[typeTask - 1];
-
-      let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
-      let bodyObj: any | undefined = customPayload.reduce((obj: any, data) => {
-        let [k, v] = data.split(':');
-        obj[k] = v;
-        return obj;
-      }, {});
-
       const payloadTask = {
         body: JSON.stringify({
           source: 'RAMEN',
           task_id: selectedTask.task_id,
-          hours: parseInt(bodyObj.hours) || 8,
+          hours: parseInt(bodyObj.hours || hours) || 8,
           ts_date: bodyObj.date || dates,
-          activity: bodyObj.activity || 'Enhancement Core e-Meterai PERURI',
+          activity: bodyObj.activity || activity || 'Enhancement Core Project Application',
         }),
         typeContent: 'application/json',
       };
@@ -262,23 +267,23 @@ const timesheet = () => async (ctx: any) => {
     }
 
     if (tag === '#bau') {
-      const qDb = (await QueryToken()) as TimeUser;
-      const TOKEN: string = qDb.token;
+      let bodyObj = GetPayload();
 
-      let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
-      let bodyObj: any | undefined = customPayload.reduce((obj: any, data) => {
-        let [k, v] = data.split(':');
-        obj[k] = v;
-        return obj;
-      }, {});
+      const isOff = await checkDate(bodyObj)
+      if (isOff) return ctx.reply(isOff)
+
+      const TOKEN: string = await QueryToken();
+
+      const tmplDb = (await collections.timePlate?.findOne({teleId})) as unknown as TimePlate
+      let {hours=null, activity=null}: any = tmplDb?.tmpObj ?? {}
 
       const payloadTask = {
         body: JSON.stringify({
           source: 'RAMEN',
           task_id: 'BU',
-          hours: parseInt(bodyObj.hours) || 8,
+          hours: parseInt(bodyObj.hours || hours) || 8,
           ts_date: bodyObj.date || dates,
-          activity: bodyObj.activity || 'Enhancement Core e-Meterai PERURI',
+          activity: bodyObj.activity || activity || 'Enhancement Core Project Application',
         }),
         typeContent: 'application/json',
       };

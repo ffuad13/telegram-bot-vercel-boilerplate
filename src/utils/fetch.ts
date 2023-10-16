@@ -22,12 +22,26 @@ const fetching = async (
     },
   };
 
+  let options2: RequestInit = {
+    method: method,
+    headers: {
+      accept: 'application/json, text/plain, */*',
+      'accept-encoding': 'gzip',
+      authorization: `Bearer ${token}`,
+      host: `${PATH[0]}.${URL}`,
+      'user-agent': 'okhttp/4.9.2',
+    },
+  };
+
   if (method === 'POST') {
     options.body = payload.body;
   }
+  if (method === 'PUT') {
+    options2.body = payload.body;
+  }
 
   try {
-    const response = await fetch(url, options);
+    const response = method === 'PUT' ? await fetch(url, options2) : await fetch(url, options);
     const data = await response.json();
     if (response.ok) {
       return data;

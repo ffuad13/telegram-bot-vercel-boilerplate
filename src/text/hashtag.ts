@@ -14,6 +14,7 @@ const timesheet = () => async (ctx: any) => {
     const URL = process.env.BASE_URL;
     const PATH: string[] = process.env.URL_PATH?.split(',') as string[];
     const sendUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}`;
+    const DraftUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}draft/`;
     const dates: string = new Date()
       .toLocaleDateString('en-GB', {
         timeZone: 'Asia/Jakarta',
@@ -43,6 +44,24 @@ const timesheet = () => async (ctx: any) => {
         (data: any) => data.source == source
       );
       return filteredTask;
+    }
+
+    async function getDraft(TOKEN: string) {
+      const getDraftUrl: string = DraftUrl;
+      const getDraft = await fetching(getDraftUrl, 'GET', '', TOKEN);
+      const dataDraft: any = getDraft.data.timesheet;
+
+      const tsIds = [];
+
+      for (const entry of dataDraft) {
+        if (entry.total_hour >= 8) {
+          tsIds.push(...entry.data.map((item: any) => item.ts_id));
+        } else {
+          ctx.reply('some draft must be 8 hour or more')
+        }
+      }
+
+      return tsIds;
     }
 
     async function QueryToken(): Promise<string> {
@@ -130,6 +149,25 @@ const timesheet = () => async (ctx: any) => {
         }
       }
 
+      if (txt1 === 'draftsend') {
+        const TOKEN: string = await QueryToken();
+        const datas = await getDraft(TOKEN)
+
+        if (datas.length <= 0) return ctx.reply('Draft is empty')
+
+        const form = new FormData()
+        for (const el of datas) {
+          form.append("pia_send", `${el}`)
+        }
+
+        const payload = {
+          body: form,
+        }
+        await fetching(DraftUrl, 'PUT', payload, TOKEN)
+
+        return ctx.reply('All draft send to approver')
+      }
+
       if (txt1 === 'report' || txt1 === 'daily') {
         const TOKEN: string = await QueryToken();
         const { user_id, user_name } = decodeJWT(TOKEN);
@@ -160,7 +198,7 @@ const timesheet = () => async (ctx: any) => {
 
             data.forEach((item: any, index:number) => {
               const key: any = Object.keys(item)
-              markdownString += `${index + 1} *${key}*  ${item[key] === "Green" ? '✅' : '⏳'}\n`;
+              markdownString += `${index + 1} *${key}*  ${item[key] === "Green" ? '✅' : item[key] === "Blue" ? '🖊️' : '⏳'}\n`;
             });
 
             return markdownString;
@@ -217,7 +255,7 @@ const timesheet = () => async (ctx: any) => {
 
       let datas = JSON.parse(sendTask.data)
 
-      let replyTxt = `Timesheet PIA Submitted\n=======\n`
+      let replyTxt = `Timesheet PIA Drafted\n=======\n`
       Object.entries(datas).forEach(([key, value]) => {
         replyTxt += `${key}: ${value}\n`
       })
@@ -309,6 +347,8 @@ const timesheet = () => async (ctx: any) => {
 \`#timesheet daily\`
 *Template*:
 \`#timesheet createTemplate **<payload>\`
+*Submit Draft*:
+\`#timesheet draftsend\`
 
 _* is optional_
 _** is mandatory_`,

@@ -7,41 +7,25 @@ const fetching = async (
   const URL = process.env.BASE_URL;
   const PATH: any = process.env.URL_PATH?.split(',');
 
-  let contentLength;
-  if (payload) contentLength = payload['body']?.length;
+  const header = {
+    accept: 'application/json, text/plain, */*',
+    'accept-encoding': 'gzip',
+    authorization: `Bearer ${token}`,
+    host: `${PATH[0]}.${URL}`,
+    'user-agent': 'okhttp/4.9.2',
+    'content-type': payload.typeContent,
+  }
 
   let options: RequestInit = {
     method: method,
-    headers: {
-      accept: 'application/json, text/plain, */*',
-      'accept-encoding': 'gzip',
-      authorization: `Bearer ${token}`,
-      host: `${PATH[0]}.${URL}`,
-      'user-agent': 'okhttp/4.9.2',
-      'content-type': payload.typeContent,
-    },
+    headers: header,
   };
 
-  let options2: RequestInit = {
-    method: method,
-    headers: {
-      accept: 'application/json, text/plain, */*',
-      'accept-encoding': 'gzip',
-      authorization: `Bearer ${token}`,
-      host: `${PATH[0]}.${URL}`,
-      'user-agent': 'okhttp/4.9.2',
-    },
-  };
-
-  if (method === 'POST') {
-    options.body = payload.body;
-  }
-  if (method === 'PUT') {
-    options2.body = payload.body;
-  }
+  if (method === 'POST' || method === 'PUT') options.body = payload.body;
+  if (payload.body instanceof FormData) delete header['content-type'];
 
   try {
-    const response = method === 'PUT' ? await fetch(url, options2) : await fetch(url, options);
+    const response = await fetch(url, options);
     const data = await response.json();
     if (response.ok) {
       return data;

@@ -371,7 +371,7 @@ const timesheet = () => async (ctx: any) => {
       return ctx.reply(taskMsg);
     }
 
-    if (tag === '#bau') {
+    if (tag === '#bau' && txt1 && typeof typeTask === 'number') {
       let bodyObj = GetPayload();
 
       const isOff = await checkDate(bodyObj);
@@ -384,10 +384,12 @@ const timesheet = () => async (ctx: any) => {
       })) as unknown as TimePlate;
       let { hours = null, activity = null }: any = tmplDb?.tmpObj ?? {};
 
+      const taskId = ["CT", "SA", "BU", "TR", "MT", "ID"]
+
       const payloadTask = {
         body: JSON.stringify({
           source: 'RAMEN',
-          task_id: 'BU',
+          task_id: taskId[typeTask - 1],
           hours: parseInt(bodyObj.hours || hours) || 8,
           ts_date: bodyObj.date || dates,
           activity:
@@ -413,7 +415,7 @@ const timesheet = () => async (ctx: any) => {
 *Submit*:
 \`#pia taskOrder *<payload>\`
 \`#ramen taskOrder *<payload>\`
-\`#bau *<payload>\`
+\`#bau taskType *<payload>\`
 *Report*:
 \`#timesheet report *<yyyymm>\`
 \`#timesheet daily\`

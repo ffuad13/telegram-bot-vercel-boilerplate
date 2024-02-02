@@ -113,12 +113,8 @@ const timesheet = () => async (ctx: any) => {
 
       function filterDay(array: any, targetDate: string) {
         return array.filter((item: any) => {
-          const formattedTargetDate = new Date(targetDate)
-            .toISOString()
-            .slice(0, 10);
-          const formattedItemDate = new Date(item.tanggal)
-            .toISOString()
-            .slice(0, 10);
+          const formattedItemDate = new Date(item.tanggal).toISOString().slice(0, 10);
+          const formattedTargetDate = new Date(targetDate).toISOString().slice(0, 10);
           return formattedItemDate === formattedTargetDate;
         });
       }
@@ -202,10 +198,9 @@ const timesheet = () => async (ctx: any) => {
       if (txt1 === 'draftlist') {
         const TOKEN: string = await QueryToken();
         const datas = await getDraft(TOKEN);
-
         if (datas.length <= 0) return ctx.reply('Draft is empty');
-        let markdownString = `*Draft*\n====\n`;
 
+        let markdownString = `*Draft*\n====\n`;
         for (const [i, entry] of datas.entries()) {
           markdownString += `*${entry.date}*\n`;
           entry.data.forEach((item: any) => {
@@ -215,6 +210,13 @@ const timesheet = () => async (ctx: any) => {
         return ctx.replyWithMarkdownV2(markdownString, {
           parse_mode: 'Markdown',
         });
+      }
+
+      if (txt1 === 'draftdelete' && txt2 && typeof parseInt(txt2) === 'number') {
+        const TOKEN: string = await QueryToken()
+        const datas = await getDraft(TOKEN)
+        if (datas.length <= 0) return ctx.reply('Draft is empty')
+        return ctx.reply('draft deleted')
       }
 
       if (txt1 === 'approv') {

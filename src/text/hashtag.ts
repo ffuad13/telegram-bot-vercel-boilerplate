@@ -106,10 +106,9 @@ const timesheet = () => async (ctx: any) => {
       }
       const monthNow = (bodyObj.date || dates)
         .split('-')
-        .join('')
-        .substring(5, 6);
+      monthNow.pop()
       const dayOff = await (
-        await fetch(`https://dayoffapi.vercel.app/api?month=${monthNow}`)
+        await fetch(`http://dayoffapi.vercel.app/api?month=${monthNow[1]}&year=${monthNow[0]}`)
       ).json();
 
       function filterDay(array: any, targetDate: string) {
@@ -207,10 +206,10 @@ const timesheet = () => async (ctx: any) => {
         if (datas.length <= 0) return ctx.reply('Draft is empty');
         let markdownString = `*Draft*\n====\n`;
 
-        for (const entry of datas) {
+        for (const [i, entry] of datas.entries()) {
           markdownString += `*${entry.date}*\n`;
           entry.data.forEach((item: any) => {
-            markdownString += `${item.source} -- ${item.activity}\n`;
+            markdownString += `${i+1} ${item.source} -- ${item.activity}\n`;
           });
         }
         return ctx.replyWithMarkdownV2(markdownString, {

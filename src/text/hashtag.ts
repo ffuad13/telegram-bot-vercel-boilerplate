@@ -15,6 +15,7 @@ const timesheet = () => async (ctx: any) => {
     const PATH: string[] = process.env.URL_PATH?.split(',') as string[];
     const sendUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}`;
     const DraftUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}draft/`;
+    const approvalUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}approval/`
     const dates: string = new Date()
       .toLocaleDateString('en-GB', {
         timeZone: 'Asia/Jakarta',
@@ -50,6 +51,15 @@ const timesheet = () => async (ctx: any) => {
       const getDraftUrl: string = DraftUrl;
       const getDraft = await fetching(getDraftUrl, 'GET', '', TOKEN);
       return getDraft.data.timesheet;
+    }
+
+    async function getApproval(TOKEN: string) {
+      const getAURL: string = approvalUrl + "?page=1"
+      const getBUrl: string = approvalUrl + "bau/"
+      const getA = await fetching(getAURL, 'GET', '', TOKEN)
+      const getB = await fetching(getBUrl, 'GET', '', TOKEN)
+
+      return [...getA.data.timesheet,...getB.data.timesheet]
     }
 
     async function QueryToken(): Promise<string> {
@@ -206,6 +216,43 @@ const timesheet = () => async (ctx: any) => {
         return ctx.replyWithMarkdownV2(markdownString, {
           parse_mode: 'Markdown',
         });
+      }
+
+      if (txt1 === 'approv') {
+        const TOKEN: string = await QueryToken()
+        const datas = await getApproval(TOKEN)
+        if (datas.length <= 0) return ctx.reply('Approval empty');
+
+        let piaID: number[] = [];
+        let ramenID: number[] = [];
+
+        for (const entry of datas) {
+          if (entry.status === 'Submitted') {
+            if (entry.source === 'PIA') piaID.push(entry.ts_id);
+            if (entry.source === 'RAMEN') ramenID.push(entry.ts_id);
+          }
+        }
+
+        const urlencoded = new URLSearchParams()
+        if (piaID.length > 0) {
+          for (const el of piaID) {
+            urlencoded.append('pia_approved', `${el}`)
+          }
+        }
+        if (ramenID.length > 0) {
+          for (const el of ramenID) {
+            urlencoded.append('ramen_approved', `${el}`)
+          }
+        }
+
+        const payload = {
+          body: urlencoded,
+          typeContent: 'application/x-www-form-urlencoded',
+        }
+
+        await fetching(approvalUrl, 'POST', payload, TOKEN)
+
+        return ctx.reply('Timesheet Approved')
       }
 
       if (txt1 === 'report' || txt1 === 'daily') {
@@ -366,9 +413,12 @@ const timesheet = () => async (ctx: any) => {
 
       const sendTask = await fetching(sendUrl, 'POST', payloadTask, TOKEN);
 
-      const taskMsg = `Message: Timesheet RAMEN Submitted\n${sendTask.post_mobile}`;
+      let replyTxt = `Timesheet RAMEN Drafted\n=======\n`;
+      Object.entries(sendTask.post_mobile).forEach(([key, value]) => {
+        replyTxt += `${key}: ${value}\n`;
+      });
 
-      return ctx.reply(taskMsg);
+      return ctx.reply(replyTxt);
     }
 
     if (tag === '#bau' && txt1 && typeof typeTask === 'number') {
@@ -402,9 +452,12 @@ const timesheet = () => async (ctx: any) => {
 
       const sendTask = await fetching(sendUrl, 'POST', payloadTask, TOKEN);
 
-      const taskMsg = `Message: Timesheet BAU Submitted\n${sendTask.post_mobile}`;
+      let replyTxt = `Timesheet BAU Drafted\n=======\n`;
+      Object.entries(sendTask.post_mobile).forEach(([key, value]) => {
+        replyTxt += `${key}: ${value}\n`;
+      });
 
-      return ctx.reply(taskMsg);
+      return ctx.reply(replyTxt);
     }
 
     return ctx.replyWithMarkdownV2(

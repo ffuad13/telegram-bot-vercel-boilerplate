@@ -517,6 +517,8 @@ const timesheet = () => async (ctx: any) => {
 *Draft*:
 \`#timesheet draftlist\`
 \`#timesheet draftsend\`
+\`#timesheet draftdelete *number\`
+\`#timesheet approv\`
 
 _* is optional_
 _** is mandatory_`,

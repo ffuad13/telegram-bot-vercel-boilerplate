@@ -13,8 +13,7 @@ const timesheet = () => async (ctx: any) => {
     const teleId: number = ctx.message.from.id;
     const URL = process.env.BASE_URL;
     const PATH: string[] = process.env.URL_PATH?.split(',') as string[];
-    const sendUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}`;
-    const DraftUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}draft/`;
+    const tsURL: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}`;
     const approvalUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}approval/`
     const dates: string = new Date()
       .toLocaleDateString('en-GB', {
@@ -48,8 +47,8 @@ const timesheet = () => async (ctx: any) => {
     }
 
     async function getDraft(TOKEN: string) {
-      const getDraftUrl: string = DraftUrl;
-      const getDraft = await fetching(getDraftUrl, 'GET', '', TOKEN);
+      const UrlDraft: string = tsURL + 'draft/';
+      const getDraft = await fetching(UrlDraft, 'GET', '', TOKEN);
       return getDraft.data.timesheet;
     }
 
@@ -78,10 +77,12 @@ const timesheet = () => async (ctx: any) => {
       activity: string;
     }
     function GetPayload() {
-      let customPayload: string[] | undefined = txt2 ? txt2.split(',') : [];
+      let sliceNum: number = txt2 === 'f' ? 4 : 3
+      let payloadText: string = txt2 === 'f' ? txt3 : txt2
+      let customPayload: string[] | undefined = payloadText ? payloadText.split(',') : [];
       let restText: string | '' = ctx.message['text']
         .split(' ')
-        .slice(3)
+        .slice(sliceNum)
         .join(' ');
 
       let tmpObj: ObjTxt = customPayload.reduce((obj: any, data) => {
@@ -104,17 +105,29 @@ const timesheet = () => async (ctx: any) => {
       if ([0, 6].indexOf(checkDay) != -1) {
         return 'Weekend Boss';
       }
-      const monthNow = (bodyObj.date || dates)
+
+      const monthYear = (bodyObj.date || dates)
         .split('-')
-      monthNow.pop()
+      monthYear.pop()
+
       const dayOff = await (
-        await fetch(`http://dayoffapi.vercel.app/api?month=${monthNow[1]}&year=${monthNow[0]}`)
+        await fetch(`http://dayoffapi.vercel.app/api?month=${monthYear[1]}&year=${monthYear[0]}`)
       ).json();
+
+      function ConvertDateFormat(inputDate: string) {
+        const parsedDate = new Date(inputDate);
+
+        const year = parsedDate.getFullYear();
+        const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(parsedDate.getDate()).padStart(2, '0');
+
+        return `${year}-${month}-${day}`;
+      }
 
       function filterDay(array: any, targetDate: string) {
         return array.filter((item: any) => {
-          const formattedItemDate = new Date(item.tanggal).toISOString().slice(0, 10);
-          const formattedTargetDate = new Date(targetDate).toISOString().slice(0, 10);
+          const formattedItemDate = ConvertDateFormat(item.tanggal)
+          const formattedTargetDate = ConvertDateFormat(targetDate)
           return formattedItemDate === formattedTargetDate;
         });
       }
@@ -190,7 +203,7 @@ const timesheet = () => async (ctx: any) => {
         const payload = {
           body: form,
         };
-        await fetching(DraftUrl, 'PUT', payload, TOKEN)
+        await fetching(tsURL+'draft/', 'PUT', payload, TOKEN)
 
         return ctx.reply('All draft send to approver');
       }
@@ -203,8 +216,8 @@ const timesheet = () => async (ctx: any) => {
         let markdownString = `*Draft*\n====\n`;
         for (const [i, entry] of datas.entries()) {
           markdownString += `*${entry.date}*\n`;
-          entry.data.forEach((item: any) => {
-            markdownString += `${i+1} ${item.source} -- ${item.activity}\n`;
+          entry.data.forEach((item: any, idx: number) => {
+            markdownString += `${i+1+idx}. ${item.source} -- ${item.activity}\n`;
           });
         }
         return ctx.replyWithMarkdownV2(markdownString, {
@@ -212,10 +225,30 @@ const timesheet = () => async (ctx: any) => {
         });
       }
 
-      if (txt1 === 'draftdelete' && txt2 && typeof parseInt(txt2) === 'number') {
+      if (txt1 === 'draftdelete' && txt2) {
+        const selectNum: number = parseInt(txt2)
+        if (!selectNum) return ctx.reply('Task order must be a number')
+
         const TOKEN: string = await QueryToken()
         const datas = await getDraft(TOKEN)
         if (datas.length <= 0) return ctx.reply('Draft is empty')
+
+        let ids: any[] = []
+        for (const list of datas) {
+          list.data.forEach((item: any) => {
+            const items = [item.source, item.ts_id]
+            ids.push(items)
+          })
+        }
+        const selectedId = ids[selectNum-1]
+        const payload = {
+          body: JSON.stringify({
+            source: selectedId[0],
+            ts_id: selectedId[1]
+          }),
+          typeContent: 'application/json',
+        }
+        await fetching(tsURL+'delete/', 'POST', payload, TOKEN)
         return ctx.reply('draft deleted')
       }
 
@@ -264,7 +297,7 @@ const timesheet = () => async (ctx: any) => {
         const getUrl: string =
           txt1 === 'report'
             ? `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[6]}${PATH[7]}?periode=${date}`
-            : `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[5]}?periode=${date}`;
+            : `${tsURL}?periode=${date}`;
 
         const getReport = await fetching(getUrl, 'GET', '', TOKEN);
 
@@ -315,8 +348,10 @@ const timesheet = () => async (ctx: any) => {
     if (tag === '#pia' && txt1 && typeof typeTask === 'number') {
       const bodyObj = GetPayload();
 
-      const isOff = await checkDate(bodyObj);
-      if (isOff) return ctx.reply(isOff);
+      if (txt2 !== 'f') {
+        const isOff = await checkDate(bodyObj);
+        if (isOff) return ctx.reply(isOff);
+      }
 
       const TOKEN: string = await QueryToken();
 
@@ -361,7 +396,7 @@ const timesheet = () => async (ctx: any) => {
         typeContent: 'application/json',
       };
 
-      const sendTask = await fetching(sendUrl, 'POST', payloadTask, TOKEN);
+      const sendTask = await fetching(tsURL, 'POST', payloadTask, TOKEN);
 
       let datas = JSON.parse(sendTask.data);
 
@@ -376,8 +411,10 @@ const timesheet = () => async (ctx: any) => {
     if (tag === '#ramen' && txt1 && typeof typeTask === 'number') {
       const bodyObj = GetPayload();
 
-      const isOff = await checkDate(bodyObj);
-      if (isOff) return ctx.reply(isOff);
+      if (txt2 !== 'f') {
+        const isOff = await checkDate(bodyObj);
+        if (isOff) return ctx.reply(isOff);
+      }
 
       const TOKEN: string = await QueryToken();
 
@@ -412,7 +449,7 @@ const timesheet = () => async (ctx: any) => {
         typeContent: 'application/json',
       };
 
-      const sendTask = await fetching(sendUrl, 'POST', payloadTask, TOKEN);
+      const sendTask = await fetching(tsURL, 'POST', payloadTask, TOKEN);
 
       let replyTxt = `Timesheet RAMEN Drafted\n=======\n`;
       Object.entries(sendTask.post_mobile).forEach(([key, value]) => {
@@ -425,8 +462,10 @@ const timesheet = () => async (ctx: any) => {
     if (tag === '#bau' && txt1 && typeof typeTask === 'number') {
       let bodyObj = GetPayload();
 
-      const isOff = await checkDate(bodyObj);
-      if (isOff) return ctx.reply(isOff);
+      if (txt2 !== 'f') {
+        const isOff = await checkDate(bodyObj);
+        if (isOff) return ctx.reply(isOff);
+      }
 
       const TOKEN: string = await QueryToken();
 
@@ -451,7 +490,7 @@ const timesheet = () => async (ctx: any) => {
         typeContent: 'application/json',
       };
 
-      const sendTask = await fetching(sendUrl, 'POST', payloadTask, TOKEN);
+      const sendTask = await fetching(tsURL, 'POST', payloadTask, TOKEN);
 
       let replyTxt = `Timesheet BAU Drafted\n=======\n`;
       Object.entries(sendTask.post_mobile).forEach(([key, value]) => {

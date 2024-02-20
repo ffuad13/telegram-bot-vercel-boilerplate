@@ -7,13 +7,22 @@ const fetching = async (
   const URL = process.env.BASE_URL;
   const PATH: any = process.env.URL_PATH?.split(',');
 
-  const header = {
+  const TypeContent = ['application/json', 'application/x-www-form-urlencoded',]
+
+  const header: {
+    accept: string;
+    'accept-encoding': string;
+    authorization: string;
+    host: string;
+    'user-agent': string;
+    'content-type'?: string;
+  } = {
     accept: 'application/json, text/plain, */*',
     'accept-encoding': 'gzip',
     authorization: `Bearer ${token}`,
     host: `${PATH[0]}.${URL}`,
     'user-agent': 'okhttp/4.9.2',
-    'content-type': payload.typeContent,
+    'content-type': TypeContent[payload.typeContent],
   }
 
   let options: RequestInit = {

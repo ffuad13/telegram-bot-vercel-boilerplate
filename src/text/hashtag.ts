@@ -26,7 +26,7 @@ const timesheet = () => async (ctx: any) => {
     async function getLogin() {
       const payloadLogin = {
         body: `email=${txt1}&password=${txt2}&firebase_token=${process.env.FIREBASE_TOKEN}`,
-        typeContent: 'application/x-www-form-urlencoded',
+        typeContent: 1,
       };
 
       const loginUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[3]}`;
@@ -217,7 +217,7 @@ const timesheet = () => async (ctx: any) => {
         for (const [i, entry] of datas.entries()) {
           markdownString += `*${entry.date}*\n`;
           entry.data.forEach((item: any, idx: number) => {
-            markdownString += `${i+1+idx}. ${item.source} -- ${item.activity}\n`;
+            markdownString += `${i+1+idx}. ${item.source} - ${item.activity}. Hours: ${item.hours}\n`;
           });
         }
         return ctx.replyWithMarkdownV2(markdownString, {
@@ -246,7 +246,7 @@ const timesheet = () => async (ctx: any) => {
             source: selectedId[0],
             ts_id: selectedId[1]
           }),
-          typeContent: 'application/json',
+          typeContent: 0,
         }
         await fetching(tsURL+'delete/', 'POST', payload, TOKEN)
         return ctx.reply('draft deleted')
@@ -281,7 +281,7 @@ const timesheet = () => async (ctx: any) => {
 
         const payload = {
           body: urlencoded,
-          typeContent: 'application/x-www-form-urlencoded',
+          typeContent: 1,
         }
 
         await fetching(approvalUrl, 'POST', payload, TOKEN)
@@ -393,7 +393,7 @@ const timesheet = () => async (ctx: any) => {
           trip_location_group_id: parseInt(bodyObj.location || location) || 2,
           working_progress: parseInt(bodyObj.progress || progress) || 95,
         }),
-        typeContent: 'application/json',
+        typeContent: 0,
       };
 
       const sendTask = await fetching(tsURL, 'POST', payloadTask, TOKEN);
@@ -446,7 +446,7 @@ const timesheet = () => async (ctx: any) => {
             activity ||
             'Enhancement Core Project Application',
         }),
-        typeContent: 'application/json',
+        typeContent: 0,
       };
 
       const sendTask = await fetching(tsURL, 'POST', payloadTask, TOKEN);
@@ -487,7 +487,7 @@ const timesheet = () => async (ctx: any) => {
             activity ||
             'Enhancement Core Project Application',
         }),
-        typeContent: 'application/json',
+        typeContent: 0,
       };
 
       const sendTask = await fetching(tsURL, 'POST', payloadTask, TOKEN);

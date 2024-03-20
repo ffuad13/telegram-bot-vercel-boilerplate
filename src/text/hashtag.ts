@@ -75,6 +75,7 @@ const timesheet = () => async (ctx: any) => {
       date?: string;
       location: string;
       activity: string;
+      list?: string;
     }
     function GetPayload() {
       let sliceNum: number = txt2 === 'f' ? 4 : 3
@@ -86,7 +87,7 @@ const timesheet = () => async (ctx: any) => {
         .join(' ');
 
       let tmpObj: ObjTxt = customPayload.reduce((obj: any, data) => {
-        const keyArr = ['hours', 'progress', 'date', 'location', 'activity'];
+        const keyArr = ['list', 'hours', 'progress', 'date', 'location', 'activity'];
         let [k, v] = data.split(':');
         if (keyArr.includes(k)) {
           if (k === 'activity') {
@@ -357,6 +358,20 @@ const timesheet = () => async (ctx: any) => {
 
       const getTaskData = await getFilteredTask(TOKEN, 'PIA');
 
+      if (bodyObj.list === 'details') {
+        const urlList = `https://${PATH[0]}.${URL}/${PATH[1]}/apiPrd/${PATH[5]}my_task/`
+        const {results} = await fetching(urlList, "GET", "", TOKEN)
+        const {TASK_NAME, PROJECT_NAME, USER_ID, USER_NAME, BU_NAME, ASSIGNED_ROLE, PM_NAME} = results[typeTask]
+        const replyText = `*PIA Task Details*
+===========
+Task  : ${TASK_NAME}
+Project: ${PROJECT_NAME}
+User  : ${USER_NAME} | ${USER_ID}
+Unit  : ${BU_NAME}
+Role  : ${ASSIGNED_ROLE}
+PM    : ${PM_NAME}`
+        return ctx.replyWithMarkdownV2(replyText, { parse_mode: 'Markdown' })
+      }
       if (txt1 === 'list') {
         let replytext = `*PIA List*\n=======\n`;
         getTaskData.forEach((el: any, i: number) => {

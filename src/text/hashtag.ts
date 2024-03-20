@@ -361,10 +361,10 @@ const timesheet = () => async (ctx: any) => {
       if (bodyObj.list === 'details') {
         const urlList = `https://${PATH[0]}.${URL}/${PATH[1]}/apiPrd/${PATH[5]}my_task/`
         const {results} = await fetching(urlList, "GET", "", TOKEN)
-        const {TASK_NAME, PROJECT_NAME, USER_ID, USER_NAME, BU_NAME, ASSIGNED_ROLE, PM_NAME} = results[typeTask]
+        const {TASK_NAME, PROJECT_NAME, USER_ID, USER_NAME, BU_NAME, ASSIGNED_ROLE, PM_NAME} = results[typeTask - 1]
         const replyText = `*PIA Task Details*
 ===========
-Task  : ${TASK_NAME}
+Task  : ${typeTask - 1} - ${TASK_NAME}
 Project: ${PROJECT_NAME}
 User  : ${USER_NAME} | ${USER_ID}
 Unit  : ${BU_NAME}

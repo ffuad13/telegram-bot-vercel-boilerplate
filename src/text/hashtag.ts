@@ -364,7 +364,7 @@ const timesheet = () => async (ctx: any) => {
         const {TASK_NAME, PROJECT_NAME, USER_ID, USER_NAME, BU_NAME, ASSIGNED_ROLE, PM_NAME} = results[typeTask - 1]
         const replyText = `*PIA Task Details*
 ===========
-Task  : ${typeTask - 1} - ${TASK_NAME}
+Task  : ${typeTask} - ${TASK_NAME}
 Project: ${PROJECT_NAME}
 User  : ${USER_NAME} | ${USER_ID}
 Unit  : ${BU_NAME}

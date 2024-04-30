@@ -36,7 +36,7 @@ const timesheet = () => async (ctx: any) => {
     }
 
     async function getFilteredTask(TOKEN: string, source: string) {
-      const getTaskUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[4]}`;
+      const getTaskUrl: string = `https://${PATH[0]}.${URL}/${PATH[2]}${PATH[4]}?job_type=ALL&project_name=ALL`;
       const getTask = await fetching(getTaskUrl, 'GET', '', TOKEN);
       const dataTask: any = getTask.data;
 

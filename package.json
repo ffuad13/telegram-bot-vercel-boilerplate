@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@types/debug": "^4.1.12",
-    "@types/node": "^18.19.14",
+    "@types/node": "^18.19.45",
     "@vercel/ncc": "^0.36.1",
     "debug": "^4.3.4",
     "nodemon": "^3.0.3",

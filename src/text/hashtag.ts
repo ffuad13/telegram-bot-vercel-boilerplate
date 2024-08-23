@@ -518,6 +518,7 @@ PM    : ${PM_NAME}`
     return ctx.replyWithMarkdownV2(
       `*Login*:
 \`#timesheet email password **login\`
+\`#timesheet purge \`
 *List task:*
 \`#pia or #ramen list\`
 *Submit*:
@@ -526,13 +527,13 @@ PM    : ${PM_NAME}`
 \`#bau taskType *<payload>\`
 *Report*:
 \`#timesheet report *<yyyymm>\`
-\`#timesheet daily\`
+\`#timesheet daily *<yyyymm>\`
 *Template*:
 \`#timesheet createTemplate **<payload>\`
 *Draft*:
 \`#timesheet draftlist\`
 \`#timesheet draftsend\`
-\`#timesheet draftdelete *number\`
+\`#timesheet draftdelete **number\`
 \`#timesheet approv\`
 
 _* is optional_
@@ -540,7 +541,7 @@ _** is mandatory_`,
       { parse_mode: 'Markdown' }
     );
   } catch (error) {
-    console.log(error);
+    // console.log(error.toString());
     ctx.reply(`error:tms`);
   }
 };
